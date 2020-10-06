@@ -42,4 +42,4 @@ The pretrained model has been finetuned  with the polyp  dataset .The dataset co
 
 
 ## Results
-# MediaevalChallenge2020
+
