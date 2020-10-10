@@ -11,8 +11,8 @@ from tqdm import tqdm
 
 from dataset import MedicalImageDataset as Dataset
 from logger import Logger
-from loss import DiceLoss, dice_coef_metric
-from unet_pre import unet_pre
+from loss import bce_dice_loss, dice_coef_metric
+from Att_Unet import Att_Unet
 from utils import log_images
 
 
@@ -24,13 +24,15 @@ def main(config):
     loader_train, loader_valid = data_loaders(config)
     loaders = {"train": loader_train, "valid": loader_valid}
 
-    unet = unet_pre()
+    unet =Att_Unet()
     unet.to(device)
 
-    dsc_loss = DiceLoss()
+    
     best_validation_dsc = 0.0
 
-    optimizer = optim.Adam(unet.parameters(), lr=config.lr)
+    optimizer = optim.Adam(unet.parameters(), lr=config.lr,weight_decay=1e-5)
+    lr_scheduler= torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=15, verbose=False)
+
 
     logger = Logger(config.logs)
     loss_train = []
@@ -60,11 +62,11 @@ def main(config):
                     with torch.set_grad_enabled(phase == "train"):
                             y_pred = unet(x)
 
-                            loss = dsc_loss(y_pred, y_true)
+                            loss = bce_dice_loss(y_pred, y_true)
 
                             if phase == "valid":
                                 loss_valid.append(loss.item())
-                                y  _pred_np = y_pred.detach().cpu().numpy()
+                                y_pred_np = y_pred.detach().cpu().numpy()
                                 validation_pred.extend(
                                     [y_pred_np[s] for s in range(y_pred_np.shape[0])]
                                 )
@@ -87,6 +89,13 @@ def main(config):
                                 loss.backward()
                                 optimizer.step()
 
+                    if i % 50 == 0:
+                        for param_group in optimizer.param_groups:
+                            print("Current learning rate is: {}".format(param_group['lr']))
+                            print("Epoch[{}/{}]({}/{}): Loss: {:.4f}".format(epoch+1, config.epochs, i, len(loaders["train"]), loss.item()))
+
+                                
+
                     if phase == "train" and (step + 1) % 10 == 0:
                         log_loss_summary(logger, loss_train, step)
                         loss_train = []
@@ -95,7 +104,9 @@ def main(config):
                     log_loss_summary(logger, loss_valid, step, prefix="val_")
                     mean_dsc = compute_iou(unet,loaders[phase])
                     logger.scalar_summary("val_dsc", mean_dsc, step)
-
+                    lr_scheduler.step(mean_dsc)
+                    print("\nMean DICE on validation:", mean_dsc)
+                    
                     if mean_dsc > best_validation_dsc:
                         best_validation_dsc = mean_dsc
                         torch.save(unet.state_dict(), os.path.join(config.weights, "unet.pt"))

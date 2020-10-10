@@ -88,6 +88,7 @@ class MedicalImageDataset(Dataset):
                 on a sample.
         """
         self.root_dir = root_dir
+        self.mode=mode
         self.transform = transform
         self.mask_transform = mask_transform
         self.imgs = make_dataset(root_dir, mode)
@@ -111,7 +112,23 @@ class MedicalImageDataset(Dataset):
 
         return img, mask
 
-    def __getitem__(self, index):
+    def __getitem__(self,index):
+      if self.mode== 'test':
+         img_path=self.imgs[index]
+         img = Image.open(img_path)
+
+         if self.transform:
+            img = self.transform(img)
+
+         if self.equalize:
+            img = ImageOps.equalize(img)
+
+         if self.augmentation:
+            img = self.augment(img)
+
+         return img
+
+      else:
         img_path, mask_path = self.imgs[index]
         # print("{} and {}".format(img_path,mask_path))
         img = Image.open(img_path)  # .convert('RGB')

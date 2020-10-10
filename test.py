@@ -4,30 +4,30 @@ import os
 import numpy as np
 import torch
 
+from skimage.io import imsave
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm import tqdm
 
 from dataset import MedicalImageDataset as Dataset
-from logger import Logger
-from loss import DiceLoss, dice_coef_metric
-from unet_pre import unet_pre
-from utils import log_images
+from loss import bce_dice_loss,  dice_coef_metric
+from Att_Unet import Att_Unet
+from utils import log_images, gray2rgb, outline
 
 
 def main(config):
 
     device = torch.device("cpu" if not torch.cuda.is_available() else config.device)
-    logger = Logger(config.logs)
+   # logger = Logger(config.logs)
     loader = data_loader(config)
 
     with torch.set_grad_enabled(False):
-        unet = unet_pre()
+        unet = Att_Unet()
         state_dict = torch.load(config.weights, map_location=device)
         unet.load_state_dict(state_dict)
         unet.eval()
         unet.to(device)
-        dsc_loss = DiceLoss()
+
 
 
         input_list = []
@@ -38,12 +38,12 @@ def main(config):
 
         for i, data in tqdm(enumerate(loader)):
             step += 1
-            x, y_true = data
-            x, y_true = x.to(device), y_true.to(device)
+            x= data
+            x= x.to(device)
 
             y_pred = unet(x)
 
-            #loss = dsc_loss(y_pred, y_true)
+            #loss = bce_dice_loss(y_pred, y_true)
             #loss_test.append(loss.item())
 
             y_pred_np = y_pred.detach().cpu().numpy()
@@ -56,22 +56,17 @@ def main(config):
             input_list.extend([x_np[s] for s in range(x_np.shape[0])])
 
 
-            if i * config.batch_size < config.vis_images:
-                tag = "image/{}".format(i)
-                num_images = config.vis_images - i * config.batch_size
-                logger.image_list_summary(
-                    tag,
-                    log_images(x,y_true=False,  y_pred)[:num_images],
-                    step,
-                )
+
+        for i in range(len(input_list)):
+            image = gray2rgb(np.squeeze(input_list[i][0,:,:]))
+            image = outline(image, pred_list[i][0,:,:], color=[255, 0, 0])
+            image=image.astype("uint8")
+            filename="{}.png".format(i)
+            filepath = os.path.join(config.predictions, filename)
+            imsave(filepath, image)
 
 
-    #    log_loss_summary(logger,  step, prefix="test_")
-    #    mean_dsc = compute_iou(unet,loader)
-    # logger.scalar_summary("test_dsc", mean_dsc, step)
-        #loss_test = []
 
-        # print("Test mean DSC: {:4f}".format(mean_dsc))
 
 
 
@@ -90,8 +85,8 @@ def data_loader(config):
     dataset = Dataset('test', config.root,
                     transform=data_transforms,
                     mask_transform=None,
-                    augment=True,
-                    equalize=True)
+                    augment=False,
+                    equalize=False)
 
     loader =DataLoader(
         dataset,
@@ -103,13 +98,14 @@ def data_loader(config):
     return loader
 
 
+
+
 """
 def compute_iou(model, loader, threshold=0.3):
-    """
-    Computes accuracy on the dataset wrapped in a loader
 
+    Computes accuracy on the dataset wrapped in a loader
     Returns: accuracy as a float value between 0 and 1
-    """
+
     device = torch.device("cpu" if not torch.cuda.is_available() else config.device)
     #model.eval()
     valloss = 0
@@ -139,6 +135,7 @@ def compute_iou(model, loader, threshold=0.3):
     return valloss / i_step
 
 """
+
 """
 def log_loss_summary(logger, loss, step, prefix=""):
     logger.scalar_summary(prefix + "loss", np.mean(loss), step)
@@ -163,7 +160,7 @@ if __name__ == "__main__":
         help="input batch size for training (default: 32)",
     )
     parser.add_argument(
-        "--weights", type=str, required=True, help="path to weights file"
+        "--weights", type=str, default="./weights/unet.pt", required=True, help="path to weights file"
     )
     parser.add_argument(
         "--root", type=str, default="./medico2020", help="root folder with images"
@@ -173,6 +170,12 @@ if __name__ == "__main__":
         type=int,
         default=256,
         help="target input image size (default: 256)",
+    )
+    parser.add_argument(
+        "--predictions",
+        type=str,
+        default="./predictions",
+        help="folder for saving images with prediction outlines",
     )
     parser.add_argument(
         "--vis-images",

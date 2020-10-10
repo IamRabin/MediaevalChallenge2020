@@ -1,22 +1,22 @@
 import torch.nn as nn
 
 
-class DiceLoss(nn.Module):
 
-    def __init__(self):
-        super(DiceLoss, self).__init__()
-        self.smooth = 1.0
+def dice_coef_loss(inputs, target):
+    smooth = 1.0
+    intersection = 2.0 * ((target * inputs).sum()) + smooth
+    union = target.sum() + inputs.sum() + smooth
 
-    def forward(self, y_pred, y_true):
-        assert y_pred.size() == y_true.size()
-        y_pred = y_pred[:, 0].contiguous().view(-1)
-        y_true = y_true[:, 0].contiguous().view(-1)
-        intersection = (y_pred * y_true).sum()
-        dsc = (2. * intersection + self.smooth) / (
-            y_pred.sum() + y_true.sum() + self.smooth
-        )
-        return 1. - dsc
+    return 1 - (intersection / union)
 
+
+
+def bce_dice_loss(inputs, target):
+    dicescore = dice_coef_loss(inputs, target)
+    bcescore = nn.BCELoss()
+    m = nn.Sigmoid()
+    bceloss = bcescore(m(inputs), target)
+    return (bceloss + dicescore)
 
 def dice_coef_metric(inputs, target):
     intersection = 2.0 * (target * inputs).sum()
