@@ -17,6 +17,7 @@ from utils import log_images, gray2rgb, outline
 
 def main(config):
 
+    makedirs(config)
     device = torch.device("cpu" if not torch.cuda.is_available() else config.device)
    # logger = Logger(config.logs)
     loader = data_loader(config)
@@ -70,6 +71,9 @@ def main(config):
 
 
 
+
+def makedirs(config):
+    os.makedirs(config.predictions, exist_ok=True)
 
 data_transforms = transforms.Compose([
                                 transforms.Resize((256, 256)),
