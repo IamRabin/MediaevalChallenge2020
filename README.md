@@ -41,16 +41,16 @@ The pretrained model has been finetuned  with the polyp  dataset .The dataset co
 
 
 
-## Results
+# Results
 
 For viewing the graph,images and events; "./log" can be loaded and viewed in tensorboard.
 
 
 Mean IOU on validation= 89.11 %
 
-# Plot
+## Plot
 ![Validation DSC VS Iterations ](./readme_fig/val_dsc.png)
 
-# Sample predictions(Red) over groundtruth(Green)
+## Sample predictions(Red) over groundtruth(Green)
 
 ![Green- GT, Red- Pred](./readme_fig/img.gif)
