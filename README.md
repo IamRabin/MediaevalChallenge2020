@@ -46,4 +46,4 @@ The pretrained model has been finetuned  with the polyp  dataset .The dataset co
 Mean IOU= 89.11 %
 -------------------------
 
-![IOU on validation:Red->Prediction,Green->Ground Truth] (./readme_fig/img.gif)
+![IOU on validation](./readme_fig/img.gif)
