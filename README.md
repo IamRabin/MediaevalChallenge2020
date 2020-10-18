@@ -1,4 +1,4 @@
-# Meta-Learning: Finetuning of Pretrained Network with Attention 
+# Meta-Learning: Finetuning of Pretrained Network with Attention
 
 This repo contains the code submitted to Medival challenge on GI tract's poly segmentaion. The pre-trained
 weights of Unet model trained on brain MRI images were fine tuned ; which is a open source available at  https://pytorch.org/hub/mateuszbuda_brain-segmentation-pytorch_unet/,thanks to "mateuszbuda" . Unet with attention mechanism was used while finetuning weights transfered from Unet trained on MRI dataset.
@@ -36,10 +36,14 @@ The pretrained model has been finetuned  with the polyp  dataset .The dataset co
 1. Download the test data
 2. Run docker container.
 3. Run `test.py`  which will load the provided  trained weights from `./weights/unet.pt` file  
-. For  help run: `python3 test.py --help`.
+. Test predicted images will be saved in "./predictions". For  help run: `python3 test.py --help`.
 
 
 
 
 ## Results
+-------------------------
+Mean IOU= 89.11 %
+-------------------------
 
+![IOU on validation:Red->Prediction,Green->Ground Truth] (./readme_fig/img.gif)
