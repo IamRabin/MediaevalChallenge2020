@@ -51,7 +51,11 @@ Mean IOU on validation= 89.11 %
 ## Plot
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 ![Validation DSC VS Iterations ](./readme_fig/val_dsc.png)
+=======
+![Validation DSC VS Iterations](./readme_fig/val_dsc.png)
+>>>>>>> 1fae896bc0847e9d7f536946e36015444b29b5d3
 =======
 ![Validation DSC VS Iterations](./readme_fig/val_dsc.png)
 >>>>>>> 1fae896bc0847e9d7f536946e36015444b29b5d3
