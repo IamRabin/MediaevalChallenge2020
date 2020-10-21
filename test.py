@@ -56,15 +56,26 @@ def main(config):
             x_np = x.detach().cpu().numpy()
             input_list.extend([x_np[s] for s in range(x_np.shape[0])])
 
+        if config.mask_outline==True:
 
+            for i in range(len(input_list)):
+                image = gray2rgb(np.squeeze(input_list[i][0,:,:]))
+                image = outline(image, pred_list[i][0,:,:], color=[255, 0, 0])
+                image=image.astype("uint8")
+                filename="{}.png".format(i)
+                filepath = os.path.join(config.predictions, filename)
+                imsave(filepath, image)
 
-        for i in range(len(input_list)):
-            image = gray2rgb(np.squeeze(input_list[i][0,:,:]))
-            image = outline(image, pred_list[i][0,:,:], color=[255, 0, 0])
-            image=image.astype("uint8")
-            filename="{}.png".format(i)
-            filepath = os.path.join(config.predictions, filename)
-            imsave(filepath, image)
+        else:
+            for i in range(len(input_list)):
+                 mask=pred_list[i][0,:,:]
+                 mask[np.nonzero(mask<0.3)]=0.0
+                 mask[np.nonzero(mask>0.3)]=255.0
+                 mask=mask.astype("uint8")
+                 filename="{}.png".format(i)
+                 filepath = os.path.join(config.predictions, filename)
+                 imsave(filepath, mask)
+
 
 
 
@@ -168,6 +179,10 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--root", type=str, default="./medico2020", help="root folder with images"
+    )
+
+    parser.add_argument(
+        "--mask_outline", type=bool, default=False, help="If True ,draws border line of mask else returns binary mask"
     )
     parser.add_argument(
         "--image-size",
