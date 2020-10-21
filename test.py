@@ -8,6 +8,7 @@ from skimage.io import imsave
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm import tqdm
+import cv2
 
 from dataset import MedicalImageDataset as Dataset
 from loss import bce_dice_loss,  dice_coef_metric
@@ -20,7 +21,7 @@ def main(config):
     makedirs(config)
     device = torch.device("cpu" if not torch.cuda.is_available() else config.device)
    # logger = Logger(config.logs)
-    loader = data_loader(config)
+    loader,dataset = data_loader(config)
 
     with torch.set_grad_enabled(False):
         unet = Att_Unet()
@@ -68,13 +69,19 @@ def main(config):
 
         else:
             for i in range(len(input_list)):
+                 img_name=dataset.imgs[i].split("/" )[-1:][0]
+                 org_shape=cv2.imread(dataset.imgs[i]).shape
                  mask=pred_list[i][0,:,:]
                  mask[np.nonzero(mask<0.3)]=0.0
                  mask[np.nonzero(mask>0.3)]=255.0
                  mask=mask.astype("uint8")
-                 filename="{}.png".format(i)
+                 mask_copy=mask.copy()
+                 mk=cv2.resize(mask,(org_shape[0],org_shape[1]),interpolation = cv2.INTER_AREA)
+
+
+                 filename="{}".format(img_name)
                  filepath = os.path.join(config.predictions, filename)
-                 imsave(filepath, mask)
+                 imsave(filepath, mk)
 
 
 
@@ -110,7 +117,7 @@ def data_loader(config):
         num_workers=4
     )
 
-    return loader
+    return loader,dataset
 
 
 
