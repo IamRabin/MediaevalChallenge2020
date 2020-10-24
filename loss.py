@@ -1,5 +1,10 @@
 import torch.nn as nn
 
+def iou_metric(inputs,target):
+    intersection = (target * inputs).sum()
+    sum_ = target.sum() + inputs.sum()
+    jac = (intersection + 1e-6) / (sum_ - intersection + 1e-6)
+    return jac
 
 
 def dice_coef_loss(inputs, target):

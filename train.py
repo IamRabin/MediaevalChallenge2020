@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from dataset import MedicalImageDataset as Dataset
 from logger import Logger
-from loss import bce_dice_loss, dice_coef_metric
+from loss import bce_dice_loss, dice_coef_metric, iou_metric
 from Att_Unet import Att_Unet
 from utils import log_images
 
@@ -27,7 +27,7 @@ def main(config):
     unet =Att_Unet()
     unet.to(device)
 
-    
+
     best_validation_dsc = 0.0
 
     optimizer = optim.Adam(unet.parameters(), lr=config.lr,weight_decay=1e-5)
@@ -94,7 +94,7 @@ def main(config):
                             print("Current learning rate is: {}".format(param_group['lr']))
                             print("Epoch[{}/{}]({}/{}): Loss: {:.4f}".format(epoch+1, config.epochs, i, len(loaders["train"]), loss.item()))
 
-                                
+
 
                     if phase == "train" and (step + 1) % 10 == 0:
                         log_loss_summary(logger, loss_train, step)
@@ -102,11 +102,13 @@ def main(config):
 
                 if phase == "valid":
                     log_loss_summary(logger, loss_valid, step, prefix="val_")
-                    mean_dsc = compute_iou(unet,loaders[phase])
+                    mean_dsc,mean_iou = compute_metric(unet,loaders[phase])
                     logger.scalar_summary("val_dsc", mean_dsc, step)
+                    logger.scalar_summary("val_iou", mean_iou, step)
                     lr_scheduler.step(mean_dsc)
                     print("\nMean DICE on validation:", mean_dsc)
-                    
+                    print("\nMean IOU on validation:", mean_iou)
+
                     if mean_dsc > best_validation_dsc:
                         best_validation_dsc = mean_dsc
                         torch.save(unet.state_dict(), os.path.join(config.weights, "unet.pt"))
@@ -170,7 +172,7 @@ def datasets(config):
     return train, valid
 
 
-def compute_iou(model, loader, threshold=0.3):
+def compute_metric(model, loader, threshold=0.3):
     """
     Computes accuracy on the dataset wrapped in a loader
 
@@ -178,7 +180,8 @@ def compute_iou(model, loader, threshold=0.3):
     """
     device = torch.device("cpu" if not torch.cuda.is_available() else config.device)
     #model.eval()
-    valloss = 0
+    valloss_one = 0
+    valloss_two = 0
 
     with torch.no_grad():
 
@@ -198,11 +201,12 @@ def compute_iou(model, loader, threshold=0.3):
             out_cut[np.nonzero(out_cut >= threshold)] = 1.0
 
             picloss = dice_coef_metric(out_cut, target.data.cpu().numpy())
-            valloss += picloss
+            iouloss=iou_metric(out_cut, target.data.cpu().numpy())
+            valloss_one += picloss
+            valloss_two +=iouloss
 
-        #print("Threshold:  " + str(threshold) + "  Validation DICE score:", valloss / i_step)
 
-    return valloss / i_step
+    return valloss_one / i_step,valloss_two/i_step
 
 
 def log_loss_summary(logger, loss, step, prefix=""):
