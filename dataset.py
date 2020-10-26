@@ -105,6 +105,11 @@ class MedicalImageDataset(Dataset):
         if random() > 0.5:
             img = ImageOps.mirror(img)
             mask = ImageOps.mirror(mask)
+
+        if random() > 0.5:
+            img = ImageOps.fit(img,(256,256),bleed=100,method=3,centering=(0.5,0.5))
+            mask =ImageOps.fit(mask,(256,256),bleed=100,method=3,centering=(0.5,0.5))
+
         if random() > 0.5:
             angle = random() * 60 - 56
             img = img.rotate(angle)
