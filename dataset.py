@@ -76,10 +76,11 @@ def make_dataset(root,mode):
   return items
 
 
+
 class MedicalImageDataset(Dataset):
     """ GI dataset."""
 
-    def __init__(self, mode, root_dir, transform=None, mask_transform=None, augment=False, equalize=False):
+    def __init__(self, mode, root_dir, transform=None):
         """
         Args:
             csv_file (string): Path to the csv file with annotations.
@@ -90,66 +91,40 @@ class MedicalImageDataset(Dataset):
         self.root_dir = root_dir
         self.mode=mode
         self.transform = transform
-        self.mask_transform = mask_transform
         self.imgs = make_dataset(root_dir, mode)
-        self.augmentation = augment
-        self.equalize = equalize
+
 
     def __len__(self):
         return len(self.imgs)
 
-    def augment(self, img, mask):
-        if random() > 0.5:
-            img = ImageOps.flip(img)
-            mask = ImageOps.flip(mask)
-        if random() > 0.5:
-            img = ImageOps.mirror(img)
-            mask = ImageOps.mirror(mask)
 
-        if random() > 0.5:
-            img = ImageOps.fit(img,(256,256),bleed=100,method=3,centering=(0.5,0.5))
-            mask =ImageOps.fit(mask,(256,256),bleed=100,method=3,centering=(0.5,0.5))
-
-        if random() > 0.5:
-            angle = random() * 60 - 56
-            img = img.rotate(angle)
-            mask = mask.rotate(angle)
-
-        return img, mask
 
     def __getitem__(self,index):
       if self.mode== 'test':
          img_path=self.imgs[index]
-         img = Image.open(img_path)
+         img =np.array( Image.open(img_path))
+         img_shape=np.array(img).shape
 
          if self.transform:
-            img = self.transform(img)
+            augmented = self.transform(image=img)
+            image=augmented["image"]
 
-         if self.equalize:
-            img = ImageOps.equalize(img)
 
-         if self.augmentation:
-            img = self.augment(img)
-
-         return img
+         return image
 
       else:
         img_path, mask_path = self.imgs[index]
         # print("{} and {}".format(img_path,mask_path))
-        img = Image.open(img_path)  # .convert('RGB')
+        img = np.array(Image.open(img_path))  # .convert('RGB')
         # mask = Image.open(mask_path)  # .convert('RGB')
         # img = Image.open(img_path).convert('L')
-        mask = Image.open(mask_path).convert('L')
+        mask = np.array(Image.open(mask_path).convert('L'))
 
         # print('{} and {}'.format(img_path,mask_path))
-        if self.equalize:
-            img = ImageOps.equalize(img)
-
-        if self.augmentation:
-            img, mask = self.augment(img, mask)
 
         if self.transform:
-            img = self.transform(img)
-            mask = self.mask_transform(mask)
+            augmented = self.transform(image=img,mask=mask)
+            image=augmented["image"]
+            mask=augmented["mask"]
 
-        return [img, mask]
+        return [image, mask]

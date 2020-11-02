@@ -8,6 +8,9 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm import tqdm
+import albumentations as A
+from albumentations.pytorch import ToTensor
+
 
 from dataset import MedicalImageDataset as Dataset
 from logger import Logger
@@ -49,6 +52,7 @@ def main(config):
 
                 validation_pred = []
                 validation_true = []
+                running_loss = 0.0
 
                 for i, data in enumerate(loaders[phase]):
                     if phase == "train":
@@ -88,17 +92,19 @@ def main(config):
                                 loss_train.append(loss.item())
                                 loss.backward()
                                 optimizer.step()
+                            running_loss += loss.detach() * x.size(0)
 
                     if i % 50 == 0:
                         for param_group in optimizer.param_groups:
                             print("Current learning rate is: {}".format(param_group['lr']))
-                            print("Epoch[{}/{}]({}/{}): Loss: {:.4f}".format(epoch+1, config.epochs, i, len(loaders["train"]), loss.item()))
 
 
 
                     if phase == "train" and (step + 1) % 10 == 0:
                         log_loss_summary(logger, loss_train, step)
                         loss_train = []
+
+                print('Epoch [%d/%d], Loss: %.4f, ' %(epoch+1, config.epochs, running_loss/len(loaders[phase].dataset)))
 
                 if phase == "valid":
                     log_loss_summary(logger, loss_valid, step, prefix="val_")
@@ -107,7 +113,8 @@ def main(config):
                     logger.scalar_summary("val_iou", mean_iou, step)
                     lr_scheduler.step(mean_dsc)
                     print("\nMean DICE on validation:", mean_dsc)
-                    print("\nMean IOU on validation:", mean_iou)
+                    print("Mean IOU on validation:", mean_iou)
+                    print("..........................................")
 
                     if mean_dsc > best_validation_dsc:
                         best_validation_dsc = mean_dsc
@@ -122,53 +129,48 @@ def main(config):
 def data_loaders(config):
     dataset_train, dataset_valid = datasets(config)
 
-    def worker_init(worker_id):
-        np.random.seed(42 + worker_id)
+
 
     loader_train = DataLoader(
         dataset_train,
         batch_size=config.batch_size,
-        shuffle=True,
-        drop_last=True,
-        num_workers=config.workers,
-        worker_init_fn=worker_init,
+        num_workers=config.workers
     )
     loader_valid = DataLoader(
         dataset_valid,
         batch_size=config.batch_size,
-        drop_last=False,
-        num_workers=config.workers,
-        worker_init_fn=worker_init,
+        num_workers=config.workers
+
     )
 
     return loader_train, loader_valid
 
-
-
-data_transforms = transforms.Compose([
-        transforms.Resize((256, 256)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
-
-mask_transform = transforms.Compose([
-                               transforms.Resize((256, 256)),
-                               transforms.ToTensor() ])
+data_transforms = A.Compose ([
+    A.Resize(width = 256, height = 256, p=1.0),
+    A.HorizontalFlip(p=0.5),
+    A.VerticalFlip(p=0.5),
+    A.Rotate((-5,5),p=0.5),
+    A.RandomSunFlare(flare_roi=(0, 0, 1, 0.5), angle_lower=0, angle_upper=1,
+                                   num_flare_circles_lower=1, num_flare_circles_upper=2,
+                                   src_radius=160, src_color=(255, 255, 255),  always_apply=False, p=0.2),
+     A.RGBShift (r_shift_limit=10, g_shift_limit=10,
+                 b_shift_limit=10, always_apply=False, p=0.2),
+    A. ElasticTransform (alpha=2, sigma=15, alpha_affine=25, interpolation=1,
+                                      border_mode=4, value=None, mask_value=None,
+                                      always_apply=False, approximate=False, p=0.2) ,
+    A.Normalize( p=1.0),
+    ToTensor(),
+])
 
 
 def datasets(config):
     train = Dataset('train', config.root,
-                    transform=data_transforms,
-                    mask_transform=mask_transform,
-                    augment=True,
-                    equalize=True)
-
-
+                    transform=data_transforms)
 
 
     valid = Dataset('val', config.root,
-                    transform=data_transforms,
-                    mask_transform=mask_transform,
-                    equalize=True)
+                    transform=data_transforms)
+
     return train, valid
 
 

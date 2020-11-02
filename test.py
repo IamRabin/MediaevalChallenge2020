@@ -6,6 +6,8 @@ import torch
 
 from skimage.io import imsave
 from torch.utils.data import DataLoader
+import albumentations as A
+from albumentations.pytorch import ToTensor
 from torchvision import transforms
 from tqdm import tqdm
 import cv2
@@ -93,27 +95,21 @@ def main(config):
 def makedirs(config):
     os.makedirs(config.predictions, exist_ok=True)
 
-data_transforms = transforms.Compose([
-                                transforms.Resize((256, 256)),
-                                transforms.ToTensor(),
-                                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
-
-#mask_transform = transforms.Compose([
-                              # transforms.Resize((256, 256)),
-                               #transforms.ToTensor() ])
+data_transforms = A.Compose ([
+    A.Resize(width = 256, height = 256, p=1.0),
+    A.Normalize( p=1.0),
+    ToTensor()
+])
 
 
 def data_loader(config):
     dataset = Dataset('test', config.root,
-                    transform=data_transforms,
-                    mask_transform=None,
-                    augment=False,
-                    equalize=False)
+                    transform=data_transforms
+                    )
 
     loader =DataLoader(
         dataset,
         batch_size=config.batch_size,
-        drop_last=False,
         num_workers=4
     )
 
