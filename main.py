@@ -12,11 +12,11 @@ import albumentations as A
 from albumentations.pytorch import ToTensor
 
 
-from dataset import MedicalImageDataset as Dataset
-from logger import Logger
-from loss import bce_dice_loss, dice_coef_metric, iou_metric
-from Att_Unet import Att_Unet
-from utils import log_images
+from common. dataset import MedicalImageDataset as Dataset
+from common.logger import Logger
+from common.loss import bce_dice_loss, dice_coef_metric,_fast_hist, jaccard_index
+from model.Att_Unet import Att_Unet
+from common.utils import log_images
 
 
 def main(config):
@@ -201,9 +201,10 @@ def compute_metric(model, loader, threshold=0.3):
             out_cut = np.copy(outputs.data.cpu().numpy())
             out_cut[np.nonzero(out_cut < threshold)] = 0.0
             out_cut[np.nonzero(out_cut >= threshold)] = 1.0
+            hist=_fast_hist(target.data.cpu().numpy(),out_cut,num_classes=2)
 
-            picloss = dice_coef_metric(out_cut, target.data.cpu().numpy())
-            iouloss=iou_metric(out_cut, target.data.cpu().numpy())
+            picloss = dice_coef_metric(hist)
+            iouloss,_=jaccard_index(hist)
             valloss_one += picloss
             valloss_two +=iouloss
 

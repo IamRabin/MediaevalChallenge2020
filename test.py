@@ -12,10 +12,10 @@ from torchvision import transforms
 from tqdm import tqdm
 import cv2
 
-from dataset import MedicalImageDataset as Dataset
-from loss import bce_dice_loss,  dice_coef_metric
-from Att_Unet import Att_Unet
-from utils import log_images, gray2rgb, outline
+from common. dataset import MedicalImageDataset as Dataset
+from common.loss import bce_dice_loss,  dice_coef_metric
+from model.Att_Unet import Att_Unet
+from common.utils import log_images, gray2rgb,  outline
 
 
 def main(config):
