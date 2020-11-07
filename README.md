@@ -46,7 +46,8 @@ The pretrained model has been finetuned  with the polyp  dataset.Unet model is g
 For viewing the graph,images and events; "./log" can be loaded and viewed in tensorboard.
 
 
-Mean DSC on validation=96.35 %  \n
+Mean DSC on validation=96.35 %  
+
 Mean IOU on validation=87.91%
 
 ## Plot
