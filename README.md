@@ -27,7 +27,7 @@ The pretrained model has been finetuned  with the polyp  dataset.Unet model is g
 
 1. Download the dataset .
 2. Run docker container.
-3. Run `train.py` script.Root path is set to `./medico2020`. For  help run: `python3 train.py --help`.
+3. Run `main.py` script.Root path is set to `./medico2020`. For  help run: `python3 train.py --help`.
 
 
 
